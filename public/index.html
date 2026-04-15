@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>AI唤醒古建 · 晋祠对越坊 | 交互式科普 · 可折叠面板</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', 'Noto Serif SC', serif;
+            background-color: #1a1a1a;
+            color: #e8e0d5;
+        }
+        /* 左上角标题区（简洁） */
+        #title-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 15;
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(8px);
+            padding: 10px 18px;
+            border-radius: 40px;
+            border-left: 4px solid #c9a87c;
+            pointer-events: none;
+        }
+        #title-bar h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        #title-bar p {
+            margin: 2px 0 0;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        /* 独立的基础简介卡片（位于右上角） */
+        #intro-card {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 15;
+            background: rgba(28, 25, 22, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(201, 168, 124, 0.5);
+            width: 260px;
+            pointer-events: auto;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+        .intro-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(201,168,124,0.3);
+        }
+        .intro-header .title {
+            font-weight: 600;
+            color: #e4c9a7;
+            font-size: 0.9rem;
+        }
+        .intro-toggle {
+            background: none;
+            border: none;
+            color: #c9a87c;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .intro-toggle:hover {
+            background: rgba(201,168,124,0.2);
+        }
+        .intro-content {
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: #ddd2c0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .intro-content strong {
+            color: #e4c9a7;
+        }
+        .intro-content.collapsed {
+            display: none;
+        }
+        /* 底部控制面板（可滚动，卡片可折叠） */
+        #controls-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 20;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+            pointer-events: none;
+            max-height: 42%;
+            overflow-y: auto;
+            padding-bottom: 10px;
+        }
+        #controls-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        #controls-panel::-webkit-scrollbar-track {
+            background: #2a241e;
+            border-radius: 4px;
+        }
+        #controls-panel::-webkit-scrollbar-thumb {
+            background: #c9a87c;
+            border-radius: 4px;
+        }
+        .card {
+            background: rgba(28, 25, 22, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(201, 168, 124, 0.4);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+            pointer-events: auto;
+            min-width: 240px;
+            flex: 1 1 260px;
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(201,168,124,0.2);
+        }
+        .card-header:hover {
+            background: rgba(201,168,124,0.1);
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #e4c9a7;
+            font-size: 0.95rem;
+        }
+        .card-toggle {
+            background: none;
+            border: none;
+            color: #c9a87c;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 26px;
+            height: 26px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-content {
+            padding: 14px 16px;
+            transition: all 0.2s;
+        }
+        .card.collapsed .card-content {
+            display: none;
+        }
+        .slider-container {
+            margin-bottom: 14px;
+        }
+        .slider-container label {
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        input[type="range"] {
+            width: 100%;
+            background: #4a3f34;
+            height: 4px;
+            border-radius: 4px;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #c9a87c;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .value-display {
+            font-family: monospace;
+            color: #e4c9a7;
+        }
+        .role-selector {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .role-btn {
+            background: #2f281e;
+            border: 1px solid #6a5e4e;
+            color: #dacbb8;
+            padding: 5px 8px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        .role-btn.active {
+            background: #7a5e3c;
+            border-color: #c9a87c;
+            color: #fff;
+        }
+        .narrative-box {
+            background: #1e1a15;
+            border-radius: 16px;
+            padding: 10px 12px;
+            margin: 12px 0;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            border-left: 3px solid #c9a87c;
+            max-height: 70px;
+            overflow-y: auto;
+        }
+        .tts-btn {
+            background: #3a3228;
+            border: 1px solid #7a6a56;
+            color: #e4c9a7;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .tts-btn.loading {
+            opacity: 0.6;
+        }
+        #voice-reset-btn {
+            background: #2a221b;
+            border: 1px solid #6a5740;
+            border-radius: 8px;
+            padding: 3px 8px;
+            font-size: 0.65rem;
+            cursor: pointer;
+        }
+        /* 浮动科普提示框 */
+        .science-tooltip {
+            position: absolute;
+            background: #1e1a15e6;
+            backdrop-filter: blur(8px);
+            border-left: 4px solid #c9a87c;
+            border-radius: 12px;
+            padding: 10px 14px;
+            max-width: 240px;
+            color: #f0e6d8;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: opacity 0.2s;
+            font-family: 'Noto Serif SC', serif;
+        }
+        .science-tooltip strong {
+            color: #e4c9a7;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .tech-badge {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            z-index: 15;
+            pointer-events: none;
+        }
+        @media (max-width: 700px) {
+            #intro-card { width: 220px; top: 70px; right: 10px; }
+            .card { min-width: 200px; }
+            .card-header { padding: 8px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="title-bar">
+        <h1>🏯 晋祠 · 对越坊</h1>
+        <p>明代牌坊 · AI互动科普</p>
+    </div>
+    <div class="tech-badge">🧠 DeepSeek + 🎙️ 讯飞星火</div>
+
+    <!-- 独立的基础简介卡片（可折叠） -->
+    <div id="intro-card">
+        <div class="intro-header" id="intro-header">
+            <span class="title">📜 古建简介</span>
+            <button class="intro-toggle" id="intro-toggle">−</button>
+        </div>
+        <div class="intro-content" id="intro-content">
+            <strong>🏛️ 建造年代</strong><br>明万历四年（1576年）<br><br>
+            <strong>📍 地理位置</strong><br>山西太原晋祠镇，悬瓮山麓<br><br>
+            <strong>✨ 建筑特色</strong><br>四柱三间三楼木牌坊，斗拱层叠，出檐深远，明代官式与地方风格融合。<br><br>
+            <strong>🏆 文物价值</strong><br>全国重点文物保护单位，“对越”匾为书法家高应元所书。
+        </div>
+    </div>
+
+    <!-- 底部功能面板（结构、意境、故事） -->
+    <div id="controls-panel">
+        <!-- 结构卡片 -->
+        <div class="card" id="card-structure">
+            <div class="card-header" data-card="structure">
+                <div class="card-title"><span>🧩 结构 · 解构</span></div>
+                <button class="card-toggle">−</button>
+            </div>
+            <div class="card-content">
+                <div class="slider-container">
+                    <label>💥 爆炸视图 <span id="explode-value" class="value-display">0%</span></label>
+                    <input type="range" id="explode-slider" min="0" max="1" step="0.01" value="0.0">
+                </div>
+                <div style="font-size:0.7rem; display:flex; justify-content:space-between;">
+                    <span>◀ 聚合</span><span>散开 ▶</span>
+                </div>
+                <p style="margin-top:10px; font-size:0.7rem; border-top:1px solid #4a3f34; padding-top:8px;">斗拱 · 枋 · 柱 · 雀替</p>
+            </div>
+        </div>
+
+        <!-- 意境卡片 -->
+        <div class="card" id="card-art">
+            <div class="card-header" data-card="art">
+                <div class="card-title"><span>🎨 意境 · 重构</span></div>
+                <button class="card-toggle">−</button>
+            </div>
+            <div class="card-content">
+                <div class="slider-container">
+                    <label>🖌️ 水墨 ⇢ 彩绘 <span id="style-value" class="value-display">彩绘·盛期</span></label>
+                    <input type="range" id="style-slider" min="0" max="1" step="0.01" value="1.0">
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem;">
+                    <span>⚫ 拓片风</span><span>🔴 大明盛彩</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 故事+语音卡片 -->
+        <div class="card" id="card-story">
+            <div class="card-header" data-card="story">
+                <div class="card-title"><span>📜 故事 · 角色AI</span></div>
+                <button class="card-toggle">−</button>
+            </div>
+            <div class="card-content">
+                <div class="role-selector">
+                    <button class="role-btn active" data-role="craftsman">🛠️ 匠人</button>
+                    <button class="role-btn" data-role="scholar">📖 文人</button>
+                    <button class="role-btn" data-role="architect">🏛️ 学者</button>
+                </div>
+                <div class="narrative-box" id="narrative-text">正在唤醒AI讲述者...</div>
+                <div style="margin:8px 0; display:flex; gap:8px;">
+                    <select id="voice-select" style="flex:1; background:#1b1612; color:#ead9b9; border:1px solid #6a5740; border-radius:8px; padding:4px; font-size:0.7rem;">
+                        <option value="auto">🎭 跟随角色</option>
+                        <option value="xiaolu">🌸 小露(自然)</option>
+                        <option value="xiaoyan">📖 小燕(标准)</option>
+                        <option value="xiaojiu">🏮 许久(稳重)</option>
+                        <option value="xiaojing">🎓 小婧(知性)</option>
+                        <option value="lingxiaoshan">🗞️ 聆小珊</option>
+                        <option value="lingxiaoyun">💬 聆小芸</option>
+                        <option value="lingxiaoyao">🎨 聆小瑶</option>
+                        <option value="lingfeiyuan">🎮 聆飞远</option>
+                        <option value="lingbosong">🌲 聆伯松</option>
+                    </select>
+                </div>
+                <div class="slider-container">
+                    <label>语速 <span id="voice-speed-value">1.00x</span></label>
+                    <input type="range" id="voice-speed-slider" min="0.7" max="1.3" step="0.01" value="1.00">
+                </div>
+                <div class="slider-container">
+                    <label>音调 <span id="voice-pitch-value">0</span></label>
+                    <input type="range" id="voice-pitch-slider" min="-12" max="12" step="1" value="0">
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                    <button id="voice-reset-btn">↺ 重置</button>
+                    <button class="tts-btn" id="speak-btn">🎧 朗读</button>
+                </div>
+                <div id="audio-status" style="font-size:0.65rem; margin-top:6px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-msg" style="position:absolute; bottom:100px; left:50%; transform:translateX(-50%); background:#1e1a15aa; padding:5px 20px; border-radius:30px; font-size:0.8rem;">🏯 加载中...</div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.128.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+        
+        // --- 初始化场景 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#1a1612');
+        scene.fog = new THREE.FogExp2('#1a1612', 0.012);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(8, 5, 12);
+        camera.lookAt(0, 2, 0);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.8;
+        controls.target.set(0, 2.5, 0);
+        
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        const styleShader = {
+            uniforms: { tDiffuse: { value: null }, mixFactor: { value: 1.0 } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            fragmentShader: `uniform sampler2D tDiffuse; uniform float mixFactor; varying vec2 vUv;
+                void main() {
+                    vec4 color = texture2D(tDiffuse, vUv);
+                    vec3 warmColor = pow(color.rgb, vec3(1.1));
+                    float gray = dot(color.rgb, vec3(0.299,0.587,0.114));
+                    vec2 offset = vec2(1.0/1024.0,0.0);
+                    float gx = dot(texture(tDiffuse, vUv+offset).rgb, vec3(0.299,0.587,0.114)) - dot(texture(tDiffuse, vUv-offset).rgb, vec3(0.299,0.587,0.114));
+                    float gy = dot(texture(tDiffuse, vUv+offset.yx).rgb, vec3(0.299,0.587,0.114)) - dot(texture(tDiffuse, vUv-offset.yx).rgb, vec3(0.299,0.587,0.114));
+                    float edge = length(vec2(gx,gy));
+                    vec3 inkColor = vec3(0.12,0.10,0.08);
+                    vec3 paperColor = vec3(0.92,0.88,0.80);
+                    float inkFactor = smoothstep(0.02,0.25,edge);
+                    vec3 finalInk = mix(paperColor, inkColor, inkFactor*0.9+0.2*gray);
+                    gl_FragColor = vec4(mix(finalInk, warmColor, mixFactor), color.a);
+                }`
+        };
+        const stylePass = new ShaderPass(styleShader);
+        composer.addPass(stylePass);
+        
+        // 光照
+        scene.add(new THREE.AmbientLight(0x404c5c, 0.45));
+        const sunLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+        sunLight.position.set(8, 18, 6);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+        scene.add(new THREE.PointLight(0xc9a87c, 0.6)).position.set(-3,5,6);
+        
+        const ground = new THREE.Mesh(new THREE.CircleGeometry(20,32), new THREE.MeshStandardMaterial({ color: 0x2a2824, roughness: 0.8 }));
+        ground.rotation.x = -Math.PI/2; ground.position.y = -0.01; ground.receiveShadow = true;
+        scene.add(ground);
+        scene.add(new THREE.GridHelper(25,20,0x9a8b7a,0x3f362c));
+        
+        // --- 创建牌坊模型并记录部件科普信息 ---
+        const archGroup = new THREE.Group();
+        scene.add(archGroup);
+        const parts = []; // { mesh, originalPos, name, science }
+        
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0xb78a5b, roughness: 0.65 });
+        const darkWood = new THREE.MeshStandardMaterial({ color: 0x8b5e3c });
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x9c9a8e });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x7a4a2a });
+        const tileMat = new THREE.MeshStandardMaterial({ color: 0x6a4e3a });
+        const goldTrim = new THREE.MeshStandardMaterial({ color: 0xc9a87c });
+        
+        function addPart(mesh, pos, name, science) {
+            mesh.castShadow = mesh.receiveShadow = true;
+            mesh.position.copy(pos);
+            archGroup.add(mesh);
+            parts.push({ mesh, originalPos: pos.clone(), name, science });
+        }
+        // 柱础
+        [[-3.0,0.2,0],[3.0,0.2,0],[-1.2,0.2,0],[1.2,0.2,0]].forEach((p,idx) => {
+            addPart(new THREE.Mesh(new THREE.BoxGeometry(1.0,0.4,1.2), stoneMat), new THREE.Vector3(...p), idx<2?"檐柱柱础":"中柱柱础", "石质柱础防潮防腐，明代覆盆式样。");
+        });
+        // 柱子
+        [[-3.0,2.0,0],[3.0,2.0,0],[-1.2,1.8,0],[1.2,1.8,0]].forEach((p,i) => {
+            const h = i<2?3.6:3.0;
+            addPart(new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.4,h,10), woodMat), new THREE.Vector3(p[0], h/2+0.2, p[2]), i<2?"檐柱":"中柱", "木柱侧脚增强稳定性，明代典型做法。");
+        });
+        // 额枋
+        addPart(new THREE.Mesh(new THREE.BoxGeometry(7.2,0.25,0.8), darkWood), new THREE.Vector3(0,3.0,0), "大额枋", "连接柱头，传递荷载，雕刻云纹。");
+        addPart(new THREE.Mesh(new THREE.BoxGeometry(3.2,0.25,0.7), darkWood), new THREE.Vector3(-1.2,2.7,0), "小额枋", "辅助连接，增强整体性。");
+        addPart(new THREE.Mesh(new THREE.BoxGeometry(3.2,0.25,0.7), darkWood), new THREE.Vector3(1.2,2.7,0), "小额枋", "辅助连接，增强整体性。");
+        // 雀替
+        [[-2.2,2.5,0.3],[2.2,2.5,0.3]].forEach(p => addPart(new THREE.Mesh(new THREE.BoxGeometry(0.6,0.3,0.4), goldTrim), new THREE.Vector3(...p), "雀替", "梁柱交界装饰构件，兼有结构支撑作用。"));
+        // 斗拱
+        for (let i=-2; i<=2; i+=1.5) {
+            addPart(new THREE.Mesh(new THREE.BoxGeometry(0.8,0.2,0.7), woodMat), new THREE.Vector3(i,3.6,0.1), "斗拱", "层层出挑，支撑屋檐，体现明代匠作工艺。");
+            addPart(new THREE.Mesh(new THREE.BoxGeometry(0.5,0.2,0.6), darkWood), new THREE.Vector3(i,3.9,0.1), "斗拱", "斗拱层层出挑，支撑屋檐。");
+        }
+        function createRoofGroup(w,d,h,mat,pos,name,science) {
+            const g = new THREE.Group();
+            const m = new THREE.Mesh(new THREE.ConeGeometry(w*0.9,h,4), mat);
+            m.rotation.y = Math.PI/4; m.position.y = h/2;
+            g.add(m);
+            const r = new THREE.Mesh(new THREE.BoxGeometry(w*1.1,0.1,0.3), goldTrim);
+            r.position.y = h;
+            g.add(r);
+            g.position.copy(pos);
+            addPart(g, pos, name, science);
+        }
+        createRoofGroup(4.0,2.5,1.6, roofMat, new THREE.Vector3(0,4.8,0), "主屋顶", "悬山顶，曲线柔和，明代官式风格。");
+        createRoofGroup(2.2,1.8,1.0, tileMat, new THREE.Vector3(-3.0,4.0,0), "次间屋顶", "歇山顶，装饰精美。");
+        createRoofGroup(2.2,1.8,1.0, tileMat, new THREE.Vector3(3.0,4.0,0), "次间屋顶", "歇山顶，装饰精美。");
+        const canvas = document.createElement('canvas'); canvas.width=256; canvas.height=128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle='#2c1e0e'; ctx.fillRect(0,0,256,128);
+        ctx.font='bold 48px "Noto Serif SC"'; ctx.fillStyle='#dac29c'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('对越',128,64);
+        const plaqueMat = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas) });
+        addPart(new THREE.Mesh(new THREE.BoxGeometry(1.8,0.6,0.1), plaqueMat), new THREE.Vector3(0,3.3,0.55), "匾额『对越』", "“对越”出自《诗经》，意为报答颂扬，书法遒劲。");
+        
+        document.getElementById('loading-msg').style.display = 'none';
+        
+        // --- 爆炸视图 ---
+        const explodeSlider = document.getElementById('explode-slider');
+        const explodeVal = document.getElementById('explode-value');
+        function updateExplode(v) {
+            const f = parseFloat(v);
+            explodeVal.textContent = Math.round(f*100)+'%';
+            parts.forEach(p => {
+                const center = new THREE.Vector3(0,2.5,0);
+                const dir = p.originalPos.clone().sub(center).normalize();
+                p.mesh.position.copy(p.originalPos.clone().add(dir.multiplyScalar(f*2.5)));
+            });
+        }
+        explodeSlider.addEventListener('input', e => { updateExplode(e.target.value); controls.autoRotate = false; setTimeout(()=>controls.autoRotate=true,3000); });
+        const styleSlider = document.getElementById('style-slider');
+        const styleVal = document.getElementById('style-value');
+        styleSlider.addEventListener('input', e => { const v = parseFloat(e.target.value); stylePass.uniforms.mixFactor.value = v; styleVal.textContent = v<0.2?'水墨拓片':(v>0.8?'数字彩绘·盛期':'过渡意境'); });
+        updateExplode(0); styleSlider.dispatchEvent(new Event('input'));
+        
+        // --- 卡片折叠（点击头部）---
+        document.querySelectorAll('.card').forEach(card => {
+            const header = card.querySelector('.card-header');
+            const toggleBtn = card.querySelector('.card-toggle');
+            if (header) {
+                header.addEventListener('click', (e) => {
+                    if (e.target !== toggleBtn) {
+                        card.classList.toggle('collapsed');
+                        toggleBtn.textContent = card.classList.contains('collapsed') ? '+' : '−';
+                    }
+                });
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        card.classList.toggle('collapsed');
+                        toggleBtn.textContent = card.classList.contains('collapsed') ? '+' : '−';
+                    });
+                }
+            }
+        });
+        // 基础简介卡片独立折叠
+        const introToggle = document.getElementById('intro-toggle');
+        const introContent = document.getElementById('intro-content');
+        introToggle.addEventListener('click', () => {
+            introContent.classList.toggle('collapsed');
+            introToggle.textContent = introContent.classList.contains('collapsed') ? '+' : '−';
+        });
+        
+        // --- 浮动科普提示框 ---
+        let tooltipDiv = null;
+        function showTooltip(text, title, x, y) {
+            if (tooltipDiv) tooltipDiv.remove();
+            tooltipDiv = document.createElement('div');
+            tooltipDiv.className = 'science-tooltip';
+            tooltipDiv.innerHTML = `<strong>🔍 ${title}</strong>${text}`;
+            tooltipDiv.style.left = (x + 15) + 'px';
+            tooltipDiv.style.top = (y + 15) + 'px';
+            document.body.appendChild(tooltipDiv);
+            setTimeout(() => { if(tooltipDiv) tooltipDiv.remove(); }, 4000);
+        }
+        // 射线检测
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        window.addEventListener('click', (event) => {
+            mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+            mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(parts.map(p => p.mesh), true);
+            if (intersects.length) {
+                let hit = intersects[0].object;
+                let part = parts.find(p => p.mesh === hit || (hit.parent && p.mesh === hit.parent));
+                if (!part && hit.parent) part = parts.find(p => p.mesh === hit.parent);
+                if (part && part.science) {
+                    showTooltip(part.science, part.name, event.clientX, event.clientY);
+                    // 高亮效果
+                    if (part.mesh.material) {
+                        const originalEmissive = part.mesh.material.emissive ? part.mesh.material.emissive.getHex() : 0x000000;
+                        part.mesh.material.emissive = new THREE.Color(0xc9a87c);
+                        setTimeout(() => { if(part.mesh.material) part.mesh.material.emissive = new THREE.Color(originalEmissive); }, 300);
+                    }
+                } else {
+                    showTooltip("点击查看建筑构件详情", "🏯 古建部件", event.clientX, event.clientY);
+                }
+            }
+        });
+        
+        // --- 后端API调用（同前，简化）---
+        const API_BASE = window.location.origin;
+        let currentRole = 'craftsman';
+        let currentNarrative = '';
+        let currentVoiceConfig = { speed: 1.0, pitch: 0, voiceId: 'auto' };
+        
+        const roleBtns = document.querySelectorAll('.role-btn');
+        const narrativeBox = document.getElementById('narrative-text');
+        const speakBtn = document.getElementById('speak-btn');
+        const voiceSelect = document.getElementById('voice-select');
+        const speedSlider = document.getElementById('voice-speed-slider');
+        const pitchSlider = document.getElementById('voice-pitch-slider');
+        const speedVal = document.getElementById('voice-speed-value');
+        const pitchVal = document.getElementById('voice-pitch-value');
+        const resetBtn = document.getElementById('voice-reset-btn');
+        const audioStatus = document.getElementById('audio-status');
+        
+        function updateTuning() {
+            speedVal.textContent = parseFloat(speedSlider.value).toFixed(2)+'x';
+            pitchVal.textContent = parseInt(pitchSlider.value);
+            currentVoiceConfig = { speed: parseFloat(speedSlider.value), pitch: parseInt(pitchSlider.value), voiceId: voiceSelect.value };
+        }
+        speedSlider.addEventListener('input', updateTuning);
+        pitchSlider.addEventListener('input', updateTuning);
+        voiceSelect.addEventListener('change', updateTuning);
+        resetBtn.addEventListener('click', () => {
+            speedSlider.value = '1.00'; pitchSlider.value = '0'; voiceSelect.value = 'auto';
+            updateTuning();
+            audioStatus.textContent = '参数已重置';
+        });
+        
+        async function fetchNarrative(role) {
+            try {
+                audioStatus.textContent = '✨ AI生成叙事...';
+                const res = await fetch(`${API_BASE}/api/generate`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ role }) });
+                const data = await res.json();
+                if (data.success) {
+                    currentNarrative = data.narrative;
+                    narrativeBox.textContent = currentNarrative;
+                    audioStatus.textContent = '✅ 叙事已生成';
+                } else throw new Error();
+            } catch(e) {
+                currentNarrative = '对越坊，明代牌坊之精品，斗拱层叠，气势雄浑。';
+                narrativeBox.textContent = currentNarrative;
+                audioStatus.textContent = '⚠️ 使用本地文本';
+            }
+        }
+        
+        async function speak() {
+            if (!currentNarrative) return;
+            speakBtn.classList.add('loading');
+            speakBtn.textContent = '合成中...';
+            try {
+                const res = await fetch(`${API_BASE}/api/tts`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ text: currentNarrative, speed: currentVoiceConfig.speed, pitch: currentVoiceConfig.pitch, voiceId: currentVoiceConfig.voiceId, role: currentRole }) });
+                const data = await res.json();
+                if (data.success && data.audio) {
+                    let base64 = data.audio.replace(/\s/g,'');
+                    while(base64.length % 4) base64 += '=';
+                    const binary = atob(base64);
+                    const bytes = new Uint8Array(binary.length);
+                    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+                    const blob = new Blob([bytes], {type:'audio/mp3'});
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audio.onended = () => URL.revokeObjectURL(url);
+                    await audio.play();
+                    audioStatus.textContent = '✅ 播放完成';
+                } else throw new Error();
+            } catch(e) {
+                audioStatus.textContent = '⚠️ 语音失败，使用浏览器语音';
+                const utter = new SpeechSynthesisUtterance(currentNarrative);
+                utter.lang='zh-CN'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utter);
+            } finally {
+                speakBtn.classList.remove('loading');
+                speakBtn.textContent = '🎧 朗读';
+            }
+        }
+        
+        speakBtn.addEventListener('click', speak);
+        roleBtns.forEach(btn => btn.addEventListener('click', async () => {
+            roleBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentRole = btn.dataset.role;
+            await fetchNarrative(currentRole);
+        }));
+        await fetchNarrative('craftsman');
+        updateTuning();
+        
+        // 动画
+        function animate() { requestAnimationFrame(animate); controls.update(); composer.render(); }
+        animate();
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); composer.setSize(window.innerWidth,window.innerHeight); });
+    </script>
+</body>
+</html>
