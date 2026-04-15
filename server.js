@@ -8,7 +8,6 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -100,7 +99,7 @@ function buildTtsWebSocketUrl(voiceId, role) {
     let actualVoiceId = voiceId;
     if (voiceId === 'auto') {
         const defaultVoiceKey = roleDefaultVoice[role] || 'male-qn-qingse';
-        actualVoiceKey = defaultVoiceKey;
+        actualVoiceId = defaultVoiceKey;
     }
     // 从映射表中获取讯飞 vcn 代码
     const vcn = voiceMap[actualVoiceId] || voiceMap['auto'];
@@ -240,7 +239,8 @@ app.post('/api/tts', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+// ---------- 启动服务器（仅此处监听端口） ----------
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 服务已启动: http://localhost:${PORT}`);
     console.log(`📝 DeepSeek + 讯飞星火 WebSocket TTS 已就绪`);
 });
